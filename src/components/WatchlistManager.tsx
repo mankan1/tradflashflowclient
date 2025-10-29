@@ -1,22 +1,57 @@
 // src/components/WatchlistManager.tsx
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Alert, ActivityIndicator } from "react-native";
+import {
+  View, Text, TextInput, TouchableOpacity,
+  FlatList, StyleSheet, Alert, ActivityIndicator
+} from "react-native";
 import { useWatchlist } from "../context/WatchlistContext";
 
 export default function WatchlistManager() {
   const { wl, loading, error, addSymbols, removeSymbols, refresh } = useWatchlist();
+
   const [input, setInput] = useState("");
+  const [busy, setBusy] = useState<Record<string, boolean>>({});
+  const [shadowEq, setShadowEq] = useState<string[] | null>(null);
+
+  // Render from shadow if present (optimistic), else from context
+  const equities = (shadowEq ?? wl?.equities ?? []).slice().sort();
 
   const onAdd = async () => {
     const raw = input.trim();
     if (!raw) return;
-    const symbols = raw.split(/[,\s]+/).map(s => s.toUpperCase()).filter(Boolean);
-    try { await addSymbols(symbols); setInput(""); }
-    catch (e: any) { Alert.alert("Add failed", e?.message || String(e)); }
+
+    const toAdd = raw.split(/[,\s]+/).map(s => s.toUpperCase()).filter(Boolean);
+    const original = equities.slice();
+
+    try {
+      // optimistic
+      setShadowEq(Array.from(new Set([...equities, ...toAdd])));
+      await addSymbols(toAdd);
+      await refresh();     // authoritative
+      setShadowEq(null);   // back to context
+      setInput("");
+    } catch (e: any) {
+      setShadowEq(original); // rollback
+      Alert.alert("Add failed", e?.message || String(e));
+    }
   };
+
   const onRemove = async (sym: string) => {
-    try { await removeSymbols([sym]); }
-    catch (e: any) { Alert.alert("Remove failed", e?.message || String(e)); }
+    const original = equities.slice();
+    try {
+      setBusy(b => ({ ...b, [sym]: true }));
+      // optimistic
+      setShadowEq(original.filter(s => s !== sym));
+
+      await removeSymbols([sym]);
+      await refresh();     // authoritative
+      setShadowEq(null);   // back to context
+    } catch (e: any) {
+      setShadowEq(original); // rollback
+      Alert.alert("Remove failed", e?.message || String(e));
+    } finally {
+      setBusy(b => ({ ...b, [sym]: false }));
+    }
   };
 
   return (
@@ -31,19 +66,30 @@ export default function WatchlistManager() {
           value={input}
           onChangeText={setInput}
           autoCapitalize="characters"
+          autoCorrect={false}
           style={S.inp}
         />
-        <TouchableOpacity onPress={onAdd} style={S.btn}><Text style={S.btnTxt}>Add</Text></TouchableOpacity>
-        <TouchableOpacity onPress={refresh} style={[S.btn, S.btnGhost]}><Text style={[S.btnTxt, S.btnTxtGhost]}>↻</Text></TouchableOpacity>
+        <TouchableOpacity onPress={onAdd} style={S.btn}>
+          <Text style={S.btnTxt}>Add</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={refresh} style={[S.btn, S.btnGhost]}>
+          <Text style={[S.btnTxt, S.btnTxtGhost]}>↻</Text>
+        </TouchableOpacity>
       </View>
 
       <FlatList
-        data={(wl?.equities ?? []).sort()}
+        data={equities}
         keyExtractor={(s) => s}
         renderItem={({ item }) => (
           <View style={S.item}>
             <Text style={S.sym}>{item}</Text>
-            <TouchableOpacity onPress={() => onRemove(item)} style={S.rm}><Text style={S.rmTxt}>Remove</Text></TouchableOpacity>
+            <TouchableOpacity
+              disabled={!!busy[item]}
+              onPress={() => onRemove(item)}
+              style={[S.rm, busy[item] && { opacity: 0.6 }]}
+            >
+              <Text style={S.rmTxt}>{busy[item] ? "Removing…" : "Remove"}</Text>
+            </TouchableOpacity>
           </View>
         )}
         ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
@@ -68,4 +114,3 @@ const S = StyleSheet.create({
   rmTxt: { color: "#991b1b", fontWeight: "700" },
   err: { color: "#b91c1c" }
 });
-

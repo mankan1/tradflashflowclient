@@ -11,8 +11,15 @@ export const fetchWatchlist = () => getJSON<Watchlist>("/watchlist");
 export const addEquities = (symbols: string[]) =>
   postJSON("/watch/symbols", { symbols });
 
-export const removeEquities = (symbols: string[]) =>
-  delJSON("/watch/symbols", { symbols });
+
+export const removeEquities = async (symbols: string[]) => {
+  try {
+    return await delJSON("/watch/symbols", { symbols });
+  } catch {
+    // Fallback for environments that drop DELETE bodies
+    return await postJSON("/unwatch/symbols", { symbols });
+  }
+};
 
 export const addOptions = (options: Watchlist["options"]) =>
   postJSON("/watch/tradier", { options });
