@@ -6,7 +6,7 @@ export const API_BASE = `http://${HOST}:${PORT}`;
 export const WS_URL   = `ws://${HOST}:${PORT}/`;
 
 export const WATCHLIST = {
-  alpaca: { equities: ["AAPL", "NVDA", "MSFT"] },
+  alpaca: { equities: ["SPY", "$SPX", "$NDX", "$DJX"] },
   tradier: {
     options: [
       { underlying: "AAPL", expiration: "2025-12-19", strike: 200, right: "C" },
