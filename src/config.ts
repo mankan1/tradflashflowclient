@@ -2,8 +2,11 @@
 const HOST = "localhost";
 const PORT = 8080;
 
-export const API_BASE = `http://${HOST}:${PORT}`;
-export const WS_URL   = `ws://${HOST}:${PORT}/`;
+export const API_BASE = `https://tradeflashflow-production.up.railway.app`;
+export const WS_URL   = `wss://tradeflashflow-production.up.railway.app/`;
+
+//export const API_BASE = `http://${HOST}:${PORT}`;
+//export const WS_URL   = `ws://${HOST}:${PORT}/`;
 
 export const WATCHLIST = {
   alpaca: { equities: ["SPY", "$SPX", "$NDX", "$DJX"] },

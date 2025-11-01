@@ -4,7 +4,8 @@ let _connecting = false;
 let _listeners: ((m:any)=>void)[] = [];
 
 function wsUrl(): string {
-  if (typeof window === "undefined") return "ws://localhost:8080/ws";
+  //if (typeof window === "undefined") return "ws://localhost:8080/ws";
+  if (typeof window === "undefined") return "wss://tradeflashflow-production.up.railway.app/ws";
   const secure = location.protocol === "https:";
   return `${secure ? "wss" : "ws"}://${location.hostname}:8080/ws`;
 }
